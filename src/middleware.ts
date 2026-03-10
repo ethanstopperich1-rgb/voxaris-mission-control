@@ -57,6 +57,6 @@ export const config = {
      *  - favicon.ico
      *  - api/webhooks (inbound webhook endpoints from VAPI, Tavus)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|logo\\.png|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.webp|api/webhooks).*)",
   ],
 };
