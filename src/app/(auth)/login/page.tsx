@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -43,13 +42,12 @@ export default function LoginPage() {
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-black/40">
         {/* Brand */}
         <div className="mb-8 flex flex-col items-center">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/logo.png"
             alt="Voxaris AI"
             width={220}
-            height={80}
             className="mb-2"
-            priority
           />
           <p className="text-xs font-medium text-zinc-400">
             Mission Control
