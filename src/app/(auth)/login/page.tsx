@@ -42,13 +42,13 @@ export default function LoginPage() {
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-black/40">
         {/* Brand */}
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gold/10 border border-gold/20">
-            <Hexagon size={24} className="text-gold" />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-200/[0.08] border border-zinc-300/20">
+            <Hexagon size={24} className="text-zinc-200" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-zinc-50">
             VOXARIS
           </h1>
-          <p className="mt-1 text-xs font-medium text-gold-dim">
+          <p className="mt-1 text-xs font-medium text-zinc-400">
             Mission Control
           </p>
         </div>
@@ -71,7 +71,7 @@ export default function LoginPage() {
               required
               autoComplete="email"
               autoFocus
-              className="bg-zinc-900/60 border-zinc-800 focus-visible:ring-gold/40 placeholder:text-zinc-600"
+              className="bg-zinc-900/60 border-zinc-800 focus-visible:ring-zinc-300/40 placeholder:text-zinc-600"
             />
           </div>
 
@@ -90,7 +90,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="bg-zinc-900/60 border-zinc-800 focus-visible:ring-gold/40 placeholder:text-zinc-600"
+              className="bg-zinc-900/60 border-zinc-800 focus-visible:ring-zinc-300/40 placeholder:text-zinc-600"
             />
           </div>
 

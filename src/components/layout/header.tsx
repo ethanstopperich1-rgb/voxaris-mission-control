@@ -26,7 +26,7 @@ export function Header() {
       <div className="flex items-center gap-3">
         {/* Agent count indicator */}
         <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5">
-          <Bot size={13} className="text-gold" />
+          <Bot size={13} className="text-zinc-200" />
           <span className="text-[11px] font-medium text-muted-foreground">
             Agents Active
           </span>
@@ -60,7 +60,7 @@ export function Header() {
           onClick={() => {
             fetch("/api/agents/sync", { method: "POST" });
           }}
-          className="flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-gold-bright"
+          className="flex items-center gap-1.5 rounded-lg bg-zinc-200 px-3 py-1.5 text-[12px] font-semibold text-zinc-950 transition-colors hover:bg-zinc-100"
         >
           <Zap size={13} />
           Sync Agents

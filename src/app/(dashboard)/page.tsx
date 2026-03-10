@@ -26,9 +26,9 @@ const kpis = [
     label: "Total Calls (30d)",
     value: "1,247",
     icon: Phone,
-    color: "text-gold",
-    bg: "bg-gold/10",
-    border: "border-gold/20",
+    color: "text-zinc-200",
+    bg: "bg-zinc-200/10",
+    border: "border-zinc-300/20",
     glow: true,
   },
   {
@@ -51,9 +51,9 @@ const kpis = [
     label: "Monthly Revenue",
     value: "$18,500",
     icon: DollarSign,
-    color: "text-gold",
-    bg: "bg-gold/10",
-    border: "border-gold/20",
+    color: "text-zinc-200",
+    bg: "bg-zinc-200/10",
+    border: "border-zinc-300/20",
     glow: true,
   },
   {
@@ -289,8 +289,8 @@ export default function DashboardHomePage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-zinc-950 via-zinc-900/80 to-zinc-950 p-8">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/5 via-transparent to-transparent" />
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-300/20 bg-gradient-to-br from-zinc-950 via-zinc-900/80 to-zinc-950 p-8">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-200/5 via-transparent to-transparent" />
         <div className="relative">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">
             Mission Control
@@ -401,7 +401,7 @@ export default function DashboardHomePage() {
           {[
             { label: "Trigger Call", icon: Phone, color: "text-blue-400 hover:bg-blue-500/10" },
             { label: "Sync Agents", icon: RefreshCcw, color: "text-emerald-400 hover:bg-emerald-500/10" },
-            { label: "Generate Report", icon: FileBarChart, color: "text-gold hover:bg-gold/10" },
+            { label: "Generate Report", icon: FileBarChart, color: "text-zinc-200 hover:bg-zinc-200/10" },
             { label: "New Client", icon: UserPlus, color: "text-violet-400 hover:bg-violet-500/10" },
           ].map((action) => (
             <button
@@ -411,7 +411,7 @@ export default function DashboardHomePage() {
                 "flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3",
                 "text-sm font-medium text-zinc-300 transition-all duration-200",
                 "hover:border-zinc-700 hover:text-zinc-100",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50",
                 action.color
               )}
             >

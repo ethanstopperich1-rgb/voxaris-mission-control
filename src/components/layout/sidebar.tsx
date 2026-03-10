@@ -15,8 +15,8 @@ export function Sidebar() {
       {/* Brand */}
       <div className="px-4 pt-5 pb-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10 border border-gold/20">
-            <Hexagon size={18} className="text-gold" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-200/[0.08] border border-zinc-300/20">
+            <Hexagon size={18} className="text-zinc-200" />
           </div>
           <div>
             <h1 className="text-[15px] font-bold tracking-tight text-foreground">
@@ -24,7 +24,7 @@ export function Sidebar() {
             </h1>
           </div>
         </div>
-        <p className="mt-1.5 pl-0.5 text-[10px] font-medium text-gold-dim">
+        <p className="mt-1.5 pl-0.5 text-[10px] font-medium text-zinc-400">
           Mission Control
         </p>
       </div>
@@ -49,14 +49,14 @@ export function Sidebar() {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150 ${
                     isActive
-                      ? "bg-gold/[0.08] text-gold"
+                      ? "bg-zinc-200/[0.08] text-zinc-200"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   }`}
                 >
                   <Icon
                     size={16}
                     strokeWidth={isActive ? 2 : 1.5}
-                    className={isActive ? "text-gold" : "text-muted-foreground"}
+                    className={isActive ? "text-zinc-200" : "text-muted-foreground"}
                   />
                   <span>{item.label}</span>
                 </Link>

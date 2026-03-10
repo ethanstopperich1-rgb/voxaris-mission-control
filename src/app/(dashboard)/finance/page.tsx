@@ -31,9 +31,9 @@ const financeKpis = [
     label: "Total Revenue",
     value: "$18,500",
     icon: DollarSign,
-    color: "text-gold",
-    bg: "bg-gold/10",
-    border: "border-gold/20",
+    color: "text-zinc-200",
+    bg: "bg-zinc-200/10",
+    border: "border-zinc-300/20",
     glow: true,
   },
   {
@@ -66,7 +66,7 @@ const financeKpis = [
 const revenueByClient = [
   { name: "Suncoast Sports", revenue: 5000, color: "#3b82f6" },
   { name: "Orlando Art", revenue: 4500, color: "#ec4899" },
-  { name: "Porsche Jackson", revenue: 5000, color: "#d4a843" },
+  { name: "Porsche Jackson", revenue: 5000, color: "#e4e4e7" },
   { name: "Arrivia", revenue: 4000, color: "#f59e0b" },
 ];
 
@@ -132,7 +132,7 @@ function ChartTooltip({
   return (
     <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs shadow-xl">
       <p className="mb-1 font-medium text-zinc-200">{label}</p>
-      <p className="text-gold">{formatCurrency(payload[0].value)}</p>
+      <p className="text-zinc-200">{formatCurrency(payload[0].value)}</p>
     </div>
   );
 }

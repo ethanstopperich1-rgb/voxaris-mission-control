@@ -58,7 +58,7 @@ const clients: Client[] = [
     industry: "automotive",
     logo_url: null,
     primary_color: "#000000",
-    accent_color: "#d4a843",
+    accent_color: "#e4e4e7",
     website: "https://porschejackson.com",
     status: "active",
     onboarding_step: 5,
@@ -112,7 +112,7 @@ export default function ClientsPage() {
         </div>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-gold/20 transition-all hover:bg-gold/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-zinc-200/20 transition-all hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50"
         >
           <UserPlus className="h-4 w-4" />
           Add Client

@@ -43,7 +43,7 @@ export default function RootLayout({
               color: "#e4e4e7",
             },
             classNames: {
-              success: "!border-gold/30",
+              success: "!border-zinc-300/30",
               error: "!border-destructive/30",
             },
           }}

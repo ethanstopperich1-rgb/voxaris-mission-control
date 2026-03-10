@@ -158,7 +158,7 @@ export default function PipelinePage() {
                         {deal.title}
                       </h4>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gold">
+                        <span className="text-sm font-semibold text-zinc-200">
                           {formatCurrency(deal.monthly_value)}
                           <span className="text-xs font-normal text-zinc-500">/mo</span>
                         </span>

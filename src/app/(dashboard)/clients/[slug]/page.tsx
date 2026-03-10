@@ -69,7 +69,7 @@ const clientData: Record<string, Client> = {
     industry: "automotive",
     logo_url: null,
     primary_color: "#000000",
-    accent_color: "#d4a843",
+    accent_color: "#e4e4e7",
     website: "https://porschejackson.com",
     status: "active",
     onboarding_step: 5,
@@ -320,7 +320,7 @@ export default function ClientDetailPage({
     return (
       <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
         <p className="text-lg font-medium">Client not found</p>
-        <Link href="/clients" className="mt-3 text-sm text-gold hover:underline">
+        <Link href="/clients" className="mt-3 text-sm text-zinc-300 hover:underline">
           Back to Clients
         </Link>
       </div>
@@ -386,7 +386,7 @@ export default function ClientDetailPage({
               className={cn(
                 "border-b-2 pb-3 pt-1 text-sm font-medium capitalize transition-colors",
                 activeTab === tab
-                  ? "border-gold text-gold"
+                  ? "border-zinc-300 text-zinc-200"
                   : "border-transparent text-zinc-500 hover:text-zinc-300"
               )}
             >
@@ -563,13 +563,13 @@ export default function ClientDetailPage({
               className={cn(
                 "h-48 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3",
                 "text-sm text-zinc-200 placeholder:text-zinc-600",
-                "transition-colors focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+                "transition-colors focus:border-zinc-300/40 focus:outline-none focus:ring-1 focus:ring-zinc-300/20"
               )}
             />
             <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                className="rounded-lg bg-gold/10 px-4 py-2 text-sm font-medium text-gold transition-colors hover:bg-gold/20"
+                className="rounded-lg bg-zinc-200/10 px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-200/20"
               >
                 Save Notes
               </button>

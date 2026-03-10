@@ -268,7 +268,7 @@ export const DEFAULT_PAGE_SIZE = 25;
 
 /** Voxaris brand colours, matching the design system. */
 export const BRAND = {
-  gold: "#d4a843",
+  gold: "#e4e4e7",
   void: "#07080a",
   emerald: "#34d399",
   rose: "#fb7185",

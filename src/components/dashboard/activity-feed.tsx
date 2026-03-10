@@ -30,7 +30,7 @@ const entityColorMap: Record<string, string> = {
   agent: "text-emerald-400",
   client: "text-amber-400",
   contact: "text-violet-400",
-  deal: "text-gold",
+  deal: "text-zinc-200",
   invoice: "text-cyan-400",
   deployment: "text-rose-400",
   content: "text-indigo-400",

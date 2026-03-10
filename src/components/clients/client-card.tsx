@@ -44,13 +44,13 @@ export function ClientCard({ client }: ClientCardProps) {
         "group flex w-full flex-col rounded-xl border border-zinc-800 bg-zinc-950/60 p-5",
         "text-left transition-all duration-200",
         "hover:border-zinc-700 hover:bg-zinc-900/60 hover:shadow-lg",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50"
       )}
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-zinc-100 group-hover:text-gold transition-colors">
+          <h3 className="truncate text-sm font-semibold text-zinc-100 group-hover:text-zinc-200 transition-colors">
             {client.name}
           </h3>
           <div className="mt-1.5 flex items-center gap-2">

@@ -309,7 +309,7 @@ export default function SettingsPage() {
           </Card>
 
           <div className="flex items-center gap-2 rounded-lg border border-zinc-800/60 bg-zinc-900/30 px-4 py-3">
-            <Shield size={14} className="shrink-0 text-gold-dim" />
+            <Shield size={14} className="shrink-0 text-zinc-400" />
             <p className="text-xs text-zinc-500">
               API keys are managed via environment variables in your Vercel
               project settings. They are never stored in the database or exposed

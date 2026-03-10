@@ -32,7 +32,7 @@ export default function CallsPage() {
         <select
           value={platformFilter}
           onChange={(e) => setPlatformFilter(e.target.value)}
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-zinc-300/40 focus:outline-none focus:ring-1 focus:ring-zinc-300/20"
         >
           <option value="all">All Platforms</option>
           <option value="vapi">VAPI</option>
@@ -42,7 +42,7 @@ export default function CallsPage() {
         <select
           value={clientFilter}
           onChange={(e) => setClientFilter(e.target.value)}
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-zinc-300/40 focus:outline-none focus:ring-1 focus:ring-zinc-300/20"
         >
           <option value="all">All Clients</option>
           <option value="suncoast-sports">Suncoast Sports</option>
@@ -54,7 +54,7 @@ export default function CallsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-zinc-300/40 focus:outline-none focus:ring-1 focus:ring-zinc-300/20"
         >
           <option value="all">All Statuses</option>
           <option value="completed">Completed</option>
@@ -65,7 +65,7 @@ export default function CallsPage() {
 
         <input
           type="date"
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-zinc-300/40 focus:outline-none focus:ring-1 focus:ring-zinc-300/20"
         />
 
         <div className="relative flex-1 min-w-[200px]">
@@ -75,7 +75,7 @@ export default function CallsPage() {
             placeholder="Search calls..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2 pl-9 pr-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2 pl-9 pr-3 text-sm text-zinc-300 placeholder:text-zinc-600 focus:border-zinc-300/40 focus:outline-none focus:ring-1 focus:ring-zinc-300/20"
           />
         </div>
       </div>
