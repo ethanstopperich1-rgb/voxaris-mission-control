@@ -1,105 +1,63 @@
-"use client";
-
 import { UserPlus } from "lucide-react";
 import { ClientCard } from "@/components/clients/client-card";
+import { createClient } from "@/lib/supabase/server";
 import type { Client } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Seed data
+// Data fetching
 // ---------------------------------------------------------------------------
 
-const clients: Client[] = [
-  {
-    id: "1",
-    slug: "suncoast-sports",
-    name: "Suncoast Sports",
-    industry: "automotive",
-    logo_url: null,
-    primary_color: "#1e40af",
-    accent_color: "#fbbf24",
-    website: "https://suncoastsports.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 92,
-    contract_start: "2025-09-01",
-    contract_end: "2026-08-31",
-    monthly_retainer: 5000,
-    notes: "Flagship automotive client. 2 VAPI agents deployed.",
-    created_at: "2025-09-01T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 2,
-    call_count_30d: 487,
-  },
-  {
-    id: "2",
-    slug: "orlando-art-of-surgery",
-    name: "Orlando Art of Surgery",
-    industry: "medical",
-    logo_url: null,
-    primary_color: "#be185d",
-    accent_color: "#f9a8d4",
-    website: "https://orlandoartofsurgery.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 88,
-    contract_start: "2025-10-01",
-    contract_end: "2026-09-30",
-    monthly_retainer: 4500,
-    notes: "Medical practice. 1 VAPI voice + 1 Tavus video agent.",
-    created_at: "2025-10-01T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 2,
-    call_count_30d: 312,
-  },
-  {
-    id: "3",
-    slug: "porsche-jackson",
-    name: "Porsche Jackson",
-    industry: "automotive",
-    logo_url: null,
-    primary_color: "#000000",
-    accent_color: "#e4e4e7",
-    website: "https://porschejackson.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 76,
-    contract_start: "2025-11-15",
-    contract_end: "2026-11-14",
-    monthly_retainer: 5000,
-    notes: "Premium automotive. Tavus video agent for virtual showroom.",
-    created_at: "2025-11-15T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 1,
-    call_count_30d: 198,
-  },
-  {
-    id: "4",
-    slug: "arrivia",
-    name: "Arrivia",
-    industry: "travel",
-    logo_url: null,
-    primary_color: "#d97706",
-    accent_color: "#fde68a",
-    website: "https://arrivia.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 85,
-    contract_start: "2025-12-01",
-    contract_end: "2026-11-30",
-    monthly_retainer: 4000,
-    notes: "Travel/membership. VAPI agents for support and USAA demos.",
-    created_at: "2025-12-01T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 5,
-    call_count_30d: 250,
-  },
-];
+async function getClients(): Promise<Client[]> {
+  const supabase = await createClient();
+
+  const thirtyDaysAgo = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const [clientsRes, agentsRes, callsRes] = await Promise.all([
+    supabase
+      .from("mc_clients")
+      .select("*")
+      .order("name", { ascending: true }),
+    supabase.from("mc_agents").select("id, client_id"),
+    supabase
+      .from("mc_calls")
+      .select("id, client_id")
+      .gte("created_at", thirtyDaysAgo),
+  ]);
+
+  const clients = (clientsRes.data ?? []) as Client[];
+  const agents = (agentsRes.data ?? []) as Array<{ id: string; client_id: string }>;
+  const calls = (callsRes.data ?? []) as Array<{ id: string; client_id: string }>;
+
+  // Compute per-client agent counts
+  const agentCountByClient: Record<string, number> = {};
+  for (const agent of agents) {
+    agentCountByClient[agent.client_id] =
+      (agentCountByClient[agent.client_id] ?? 0) + 1;
+  }
+
+  // Compute per-client call counts (30d)
+  const callCountByClient: Record<string, number> = {};
+  for (const call of calls) {
+    callCountByClient[call.client_id] =
+      (callCountByClient[call.client_id] ?? 0) + 1;
+  }
+
+  return clients.map((c) => ({
+    ...c,
+    agent_count: agentCountByClient[c.id] ?? 0,
+    call_count_30d: callCountByClient[c.id] ?? 0,
+  }));
+}
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default function ClientsPage() {
+export default async function ClientsPage() {
+  const clients = await getClients();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -112,7 +70,7 @@ export default function ClientsPage() {
         </div>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-zinc-200/20 transition-all hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50"
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-zinc-200/20 transition-all duration-150 hover:bg-zinc-100 hover:shadow-xl hover:shadow-zinc-200/25 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50"
         >
           <UserPlus className="h-4 w-4" />
           Add Client

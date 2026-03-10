@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { agentUpdateSchema } from "@/lib/schemas";
 
 export async function GET(
   _request: NextRequest,
@@ -40,7 +41,7 @@ export async function PATCH(
     const { id } = await params;
     const supabase = await createClient();
 
-    let body: Record<string, unknown>;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
@@ -50,27 +51,15 @@ export async function PATCH(
       );
     }
 
-    const allowedFields = [
-      "name",
-      "client_id",
-      "platform",
-      "platform_agent_id",
-      "agent_type",
-      "phone_number",
-      "voice_id",
-      "voice_name",
-      "llm_id",
-      "prompt_version",
-      "status",
-      "config",
-    ];
-
-    const updates: Record<string, unknown> = {};
-    for (const key of allowedFields) {
-      if (key in body) {
-        updates[key] = body[key];
-      }
+    const parsed = agentUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const updates = { ...parsed.data } as Record<string, unknown>;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

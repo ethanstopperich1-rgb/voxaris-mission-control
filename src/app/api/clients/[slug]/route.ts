@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { clientUpdateSchema } from "@/lib/schemas";
 
 export async function GET(
   _request: NextRequest,
@@ -40,7 +41,7 @@ export async function PUT(
   const { slug } = await params;
   const supabase = await createClient();
 
-  let body: Record<string, unknown>;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
@@ -50,29 +51,15 @@ export async function PUT(
     );
   }
 
-  // Only allow updating specific fields
-  const allowedFields = [
-    "name",
-    "industry",
-    "status",
-    "monthly_retainer",
-    "website",
-    "notes",
-    "health_score",
-    "onboarding_step",
-    "contract_start",
-    "contract_end",
-    "primary_color",
-    "accent_color",
-    "logo_url",
-  ];
-
-  const updates: Record<string, unknown> = {};
-  for (const key of allowedFields) {
-    if (key in body) {
-      updates[key] = body[key];
-    }
+  const parsed = clientUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
+
+  const updates = { ...parsed.data } as Record<string, unknown>;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

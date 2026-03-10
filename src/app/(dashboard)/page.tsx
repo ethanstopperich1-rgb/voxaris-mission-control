@@ -9,6 +9,7 @@ import {
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { QuickActions } from "@/components/dashboard/quick-actions";
+import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import type { Client, ActivityEntry } from "@/lib/types";
@@ -30,6 +31,12 @@ const statusBadge: Record<string, { bg: string; text: string; dot: string }> = {
   churned: { bg: "bg-red-500/15", text: "text-red-400", dot: "bg-red-400" },
 };
 
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 // ---------------------------------------------------------------------------
 // Data fetching
 // ---------------------------------------------------------------------------
@@ -41,6 +48,10 @@ async function getDashboardData() {
     Date.now() - 30 * 24 * 60 * 60 * 1000
   ).toISOString();
 
+  const fourteenDaysAgo = new Date(
+    Date.now() - 14 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
   const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
   // Fire all queries in parallel
@@ -50,6 +61,7 @@ async function getDashboardData() {
     callsRes,
     costsRes,
     activityRes,
+    callsDetailRes,
   ] = await Promise.all([
     // 1. All clients
     supabase
@@ -79,6 +91,12 @@ async function getDashboardData() {
       .select("id, action, details, entity_type, entity_id, source, user_id, created_at")
       .order("created_at", { ascending: false })
       .limit(10),
+
+    // 6. Calls with date + platform for charts (last 14 days)
+    supabase
+      .from("mc_calls")
+      .select("id, created_at, platform")
+      .gte("created_at", fourteenDaysAgo),
   ]);
 
   // Extract data with fallbacks
@@ -108,6 +126,12 @@ async function getDashboardData() {
   }>;
 
   const activities = (activityRes.data ?? []) as ActivityEntry[];
+
+  const callsDetailed = (callsDetailRes.data ?? []) as Array<{
+    id: string;
+    created_at: string;
+    platform: string;
+  }>;
 
   // Compute per-client agent counts
   const agentCountByClient: Record<string, number> = {};
@@ -159,6 +183,66 @@ async function getDashboardData() {
       ? ((monthlyRevenue - platformCosts) / monthlyRevenue) * 100
       : 0;
 
+  // -------------------------------------------------------------------------
+  // Chart data: Calls per day (last 14 days)
+  // -------------------------------------------------------------------------
+  const callsByDate: Record<string, number> = {};
+  for (const call of callsDetailed) {
+    const dateKey = call.created_at.slice(0, 10); // "YYYY-MM-DD"
+    callsByDate[dateKey] = (callsByDate[dateKey] ?? 0) + 1;
+  }
+
+  // Build a continuous 14-day series
+  const callsPerDay: { date: string; calls: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const dateKey = d.toISOString().slice(0, 10);
+    const dayLabel = DAY_LABELS[d.getDay()];
+    callsPerDay.push({
+      date: i === 0 ? "Today" : dayLabel,
+      calls: callsByDate[dateKey] ?? 0,
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Chart data: Revenue trend (last 6 months from active client retainers)
+  // -------------------------------------------------------------------------
+  const revenueData: { month: string; revenue: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const label = MONTH_LABELS[d.getMonth()];
+    // Use current monthly revenue as an approximation for all months
+    // In production this would come from invoices or historical snapshots
+    revenueData.push({
+      month: label,
+      revenue: monthlyRevenue,
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Chart data: Platform distribution
+  // -------------------------------------------------------------------------
+  const platformCounts: Record<string, number> = {};
+  for (const call of callsDetailed) {
+    const p = (call.platform ?? "unknown").toLowerCase();
+    platformCounts[p] = (platformCounts[p] ?? 0) + 1;
+  }
+
+  const platformData = Object.entries(platformCounts).map(
+    ([platform, count]) => ({ platform, count })
+  );
+
+  // -------------------------------------------------------------------------
+  // KPI Sparkline data: 7-day call trend
+  // -------------------------------------------------------------------------
+  const sparklineCalls: number[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const dateKey = d.toISOString().slice(0, 10);
+    sparklineCalls.push(callsByDate[dateKey] ?? 0);
+  }
+
   return {
     clientSummaries,
     activities,
@@ -170,6 +254,12 @@ async function getDashboardData() {
       platformCosts,
       profitMargin,
     },
+    charts: {
+      callsPerDay,
+      revenueData,
+      platformData,
+    },
+    sparklineCalls,
   };
 }
 
@@ -178,7 +268,8 @@ async function getDashboardData() {
 // ---------------------------------------------------------------------------
 
 export default async function DashboardHomePage() {
-  const { clientSummaries, activities, kpis } = await getDashboardData();
+  const { clientSummaries, activities, kpis, charts, sparklineCalls } =
+    await getDashboardData();
 
   const kpiCards = [
     {
@@ -189,6 +280,8 @@ export default async function DashboardHomePage() {
       bg: "bg-zinc-200/10",
       border: "border-zinc-300/20",
       glow: true,
+      sparklineData: sparklineCalls,
+      sparklineColor: "#d4d4d8",
     },
     {
       label: "Active Agents",
@@ -197,6 +290,7 @@ export default async function DashboardHomePage() {
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
+      sparklineColor: "#34d399",
     },
     {
       label: "Active Clients",
@@ -205,6 +299,7 @@ export default async function DashboardHomePage() {
       color: "text-blue-400",
       bg: "bg-blue-500/10",
       border: "border-blue-500/20",
+      sparklineColor: "#60a5fa",
     },
     {
       label: "Monthly Revenue",
@@ -214,6 +309,7 @@ export default async function DashboardHomePage() {
       bg: "bg-zinc-200/10",
       border: "border-zinc-300/20",
       glow: true,
+      sparklineColor: "#d4d4d8",
     },
     {
       label: "Platform Costs",
@@ -222,6 +318,7 @@ export default async function DashboardHomePage() {
       color: "text-rose-400",
       bg: "bg-rose-500/10",
       border: "border-rose-500/20",
+      sparklineColor: "#fb7185",
     },
     {
       label: "Profit Margin",
@@ -230,16 +327,17 @@ export default async function DashboardHomePage() {
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
+      sparklineColor: "#34d399",
     },
   ];
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-zinc-300/20 bg-gradient-to-br from-zinc-950 via-zinc-900/80 to-zinc-950 p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-300/20 bg-gradient-to-br from-zinc-950 via-zinc-900/80 to-zinc-950 p-5 sm:p-8">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-200/5 via-transparent to-transparent" />
         <div className="relative">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
             Mission Control
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
@@ -249,11 +347,18 @@ export default async function DashboardHomePage() {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-6">
         {kpiCards.map((kpi, i) => (
           <KpiCard key={kpi.label} {...kpi} delay={i * 80} />
         ))}
       </div>
+
+      {/* Charts Section */}
+      <DashboardCharts
+        callsData={charts.callsPerDay}
+        revenueData={charts.revenueData}
+        platformData={charts.platformData}
+      />
 
       {/* Client Summary + Activity Feed */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -277,7 +382,7 @@ export default async function DashboardHomePage() {
               return (
                 <div
                   key={client.id}
-                  className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900/60"
+                  className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/60 hover:shadow-lg hover:shadow-black/20 hover:scale-[1.01]"
                 >
                   <div className="mb-2 flex items-start justify-between">
                     <h3 className="truncate text-sm font-semibold text-zinc-100">

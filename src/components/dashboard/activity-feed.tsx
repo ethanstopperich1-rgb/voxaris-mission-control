@@ -60,7 +60,7 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
         return (
           <div
             key={activity.id}
-            className="flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-zinc-800/50"
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5 transition-all duration-150 hover:bg-zinc-800/50 hover:translate-x-0.5 cursor-default"
           >
             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800">
               <Icon className={cn("h-3.5 w-3.5", iconColor)} />

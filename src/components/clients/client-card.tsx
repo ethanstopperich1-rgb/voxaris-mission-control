@@ -43,7 +43,8 @@ export function ClientCard({ client }: ClientCardProps) {
       className={cn(
         "group flex w-full flex-col rounded-xl border border-zinc-800 bg-zinc-950/60 p-5",
         "text-left transition-all duration-200",
-        "hover:border-zinc-700 hover:bg-zinc-900/60 hover:shadow-lg",
+        "hover:border-zinc-700 hover:bg-zinc-900/60 hover:shadow-lg hover:shadow-black/20 hover:scale-[1.01]",
+        "active:scale-[0.99]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50"
       )}
     >

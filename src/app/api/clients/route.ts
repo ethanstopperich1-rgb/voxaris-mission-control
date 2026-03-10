@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { clientSchema } from "@/lib/schemas";
 
 export async function GET() {
   const supabase = await createClient();
@@ -22,7 +23,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
-  let body: Record<string, unknown>;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
@@ -32,23 +33,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, slug, industry, status, monthly_retainer, website, notes } =
-    body as {
-      name?: string;
-      slug?: string;
-      industry?: string;
-      status?: string;
-      monthly_retainer?: number;
-      website?: string;
-      notes?: string;
-    };
-
-  if (!name || !slug) {
+  const parsed = clientSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "name and slug are required" },
+      { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
+
+  const { name, slug, industry, status, monthly_retainer, website, notes } =
+    parsed.data;
 
   const { data, error } = await supabase
     .from("mc_clients")
@@ -58,7 +52,7 @@ export async function POST(request: NextRequest) {
       industry: industry ?? "other",
       status: status ?? "onboarding",
       monthly_retainer: monthly_retainer ?? 0,
-      website: website ?? null,
+      website: website || null,
       notes: notes ?? null,
       health_score: 50,
       onboarding_step: 1,

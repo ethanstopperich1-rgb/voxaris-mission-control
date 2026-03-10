@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { CommandPalette } from "@/components/layout/command-palette";
 import { Providers } from "@/lib/providers";
 
 export default function DashboardLayout({
@@ -9,6 +10,7 @@ export default function DashboardLayout({
 }) {
   return (
     <Providers>
+      <CommandPalette />
       <Sidebar />
       <div className="lg:pl-[220px]">
         <Header />

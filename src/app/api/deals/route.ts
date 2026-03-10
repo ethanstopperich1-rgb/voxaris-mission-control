@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { dealSchema } from "@/lib/schemas";
 
 export async function GET() {
   try {
@@ -32,12 +33,20 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    let body: Record<string, unknown>;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
       return NextResponse.json(
         { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
+    const parsed = dealSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
@@ -52,30 +61,13 @@ export async function POST(request: NextRequest) {
       probability,
       expected_close,
       notes,
-    } = body as {
-      title?: string;
-      client_id?: string;
-      contact_id?: string;
-      stage?: string;
-      value?: number;
-      monthly_value?: number;
-      probability?: number;
-      expected_close?: string;
-      notes?: string;
-    };
-
-    if (!title || !client_id) {
-      return NextResponse.json(
-        { error: "title and client_id are required" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     const { data, error } = await supabase
       .from("mc_deals")
       .insert({
         title,
-        client_id,
+        client_id: client_id ?? null,
         contact_id: contact_id ?? null,
         stage: stage ?? "prospect",
         value: value ?? 0,

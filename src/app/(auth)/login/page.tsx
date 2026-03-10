@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,92 +37,97 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm animate-fade-up">
-      {/* Card */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-black/40">
-        {/* Brand */}
-        <div className="mb-8 flex flex-col items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="Voxaris AI"
-            width={220}
-            className="mb-2"
-          />
-          <p className="text-xs font-medium text-zinc-400">
-            Mission Control
-          </p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="email"
-              className="text-xs font-medium text-zinc-400"
-            >
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@voxaris.io"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              autoFocus
-              className="bg-zinc-900/60 border-zinc-800 focus-visible:ring-zinc-300/40 placeholder:text-zinc-600"
+    <div className="w-full max-w-[400px] animate-fade-up-login">
+      {/* Glassmorphic card */}
+      <div className="login-card-wrapper login-card-shadow">
+        <div className="login-card-inner px-10 py-10">
+          {/* Brand */}
+          <div className="mb-10 flex flex-col items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Voxaris AI"
+              width={200}
+              className="mb-3"
             />
+            <p className="text-[11px] font-medium uppercase tracking-[0.25em] text-zinc-500">
+              Mission Control
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="text-xs font-medium text-zinc-400"
-            >
-              Password
-            </label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              className="bg-zinc-900/60 border-zinc-800 focus-visible:ring-zinc-300/40 placeholder:text-zinc-600"
-            />
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div className="rounded-lg border border-red-900/40 bg-red-950/30 px-3 py-2">
-              <p className="text-xs text-red-400">{error}</p>
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <label
+                htmlFor="email"
+                className="block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+              >
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@voxaris.io"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                autoFocus
+                className="login-input h-10 rounded-lg border-zinc-800/80 bg-zinc-900/50 px-3.5 text-sm text-zinc-200 transition-all duration-200 placeholder:text-zinc-600 focus-visible:border-zinc-600 focus-visible:ring-1 focus-visible:ring-zinc-400/30"
+              />
             </div>
-          )}
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              "Sign In"
+            <div className="space-y-2">
+              <label
+                htmlFor="password"
+                className="block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+              >
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="login-input h-10 rounded-lg border-zinc-800/80 bg-zinc-900/50 px-3.5 text-sm text-zinc-200 transition-all duration-200 placeholder:text-zinc-600 focus-visible:border-zinc-600 focus-visible:ring-1 focus-visible:ring-zinc-400/30"
+              />
+            </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="animate-error-slide-in rounded-lg border border-red-900/40 bg-red-950/20 px-3.5 py-2.5 backdrop-blur-sm">
+                <p className="text-xs text-red-400">{error}</p>
+              </div>
             )}
-          </Button>
-        </form>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="login-btn-glow mt-3 h-10 w-full rounded-lg bg-zinc-200 text-sm font-semibold text-zinc-950 transition-all duration-300 hover:bg-zinc-100 disabled:opacity-40"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
 
       {/* Footer */}
-      <p className="mt-6 text-center text-[11px] text-zinc-600">
-        Voxaris AI &middot; Secure Access
-      </p>
+      <div className="mt-8 flex items-center justify-center gap-1.5 text-[11px] text-zinc-600">
+        <Lock size={10} className="text-zinc-600" />
+        <span>Voxaris AI</span>
+        <span className="text-zinc-700">&middot;</span>
+        <span>Secure Access</span>
+      </div>
     </div>
   );
 }

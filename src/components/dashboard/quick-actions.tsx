@@ -25,14 +25,15 @@ export function QuickActions() {
             key={action.label}
             type="button"
             className={cn(
-              "flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3",
+              "group/action flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3",
               "text-sm font-medium text-zinc-300 transition-all duration-200",
-              "hover:border-zinc-700 hover:text-zinc-100",
+              "hover:border-zinc-700 hover:text-zinc-100 hover:shadow-lg hover:shadow-black/20 hover:scale-[1.02]",
+              "active:scale-[0.98]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50",
               action.color
             )}
           >
-            <action.icon className="h-4 w-4" />
+            <action.icon className="h-4 w-4 transition-transform duration-200 group-hover/action:scale-110" />
             {action.label}
           </button>
         ))}

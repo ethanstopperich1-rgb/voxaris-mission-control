@@ -18,7 +18,7 @@ export function PlatformBadge({ platform, className }: PlatformBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors duration-150",
         style.bg,
         style.text,
         className

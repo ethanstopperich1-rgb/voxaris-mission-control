@@ -44,16 +44,19 @@ export function Sidebar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150 ${
+                  className={`group/nav relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150 ${
                     isActive
-                      ? "bg-zinc-200/[0.08] text-zinc-200"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      ? "bg-zinc-200/[0.08] text-zinc-200 shadow-sm shadow-zinc-200/5"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground hover:translate-x-0.5"
                   }`}
                 >
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-zinc-300 transition-all duration-200" />
+                  )}
                   <Icon
                     size={16}
                     strokeWidth={isActive ? 2 : 1.5}
-                    className={isActive ? "text-zinc-200" : "text-muted-foreground"}
+                    className={`transition-colors duration-150 ${isActive ? "text-zinc-200" : "text-muted-foreground group-hover/nav:text-foreground"}`}
                   />
                   <span>{item.label}</span>
                 </Link>
@@ -77,7 +80,7 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="fixed left-4 top-4 z-50 rounded-xl border border-border bg-card p-2 shadow-sm lg:hidden"
+        className="fixed left-4 top-4 z-50 rounded-xl border border-border bg-card p-2 shadow-sm transition-all duration-150 hover:bg-accent hover:border-zinc-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
       >
@@ -88,18 +91,20 @@ export function Sidebar() {
         )}
       </button>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {/* Mobile overlay -- always mounted, toggled via opacity for smooth fade */}
+      <div
+        className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-200 lg:pointer-events-none lg:hidden ${
+          sidebarOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
 
       {/* Sidebar panel */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-full w-[220px] flex-col border-r border-border bg-card transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-full w-[220px] flex-col border-r border-border bg-card transition-transform duration-200 ease-out lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         role="navigation"
