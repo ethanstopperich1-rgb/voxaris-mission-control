@@ -9,10 +9,19 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
   const clientId = searchParams.get("client_id");
 
+  // Pagination params
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(
+    200,
+    Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10))
+  );
+  const offset = (page - 1) * limit;
+
   let query = supabase
     .from("mc_agents")
-    .select("*, client:mc_clients(id, name, slug)")
-    .order("name", { ascending: true });
+    .select("*, client:mc_clients(id, name, slug)", { count: "exact" })
+    .order("name", { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (platform && platform !== "all") {
     query = query.eq("platform", platform);
@@ -24,7 +33,7 @@ export async function GET(request: NextRequest) {
     query = query.eq("client_id", clientId);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     return NextResponse.json(
@@ -33,7 +42,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json({
+    data,
+    pagination: {
+      page,
+      limit,
+      total: count ?? 0,
+      total_pages: count ? Math.ceil(count / limit) : 0,
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {

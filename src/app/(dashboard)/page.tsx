@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Phone,
   Bot,
@@ -7,262 +5,13 @@ import {
   DollarSign,
   TrendingDown,
   TrendingUp,
-  Zap,
-  RefreshCcw,
-  FileBarChart,
-  UserPlus,
 } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { QuickActions } from "@/components/dashboard/quick-actions";
 import { cn, formatCurrency } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 import type { Client, ActivityEntry } from "@/lib/types";
-
-// ---------------------------------------------------------------------------
-// Placeholder seed data
-// ---------------------------------------------------------------------------
-
-const kpis = [
-  {
-    label: "Total Calls (30d)",
-    value: "1,247",
-    icon: Phone,
-    color: "text-zinc-200",
-    bg: "bg-zinc-200/10",
-    border: "border-zinc-300/20",
-    glow: true,
-  },
-  {
-    label: "Active Agents",
-    value: "12",
-    icon: Bot,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-  },
-  {
-    label: "Active Clients",
-    value: "4",
-    icon: Building2,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
-  },
-  {
-    label: "Monthly Revenue",
-    value: "$18,500",
-    icon: DollarSign,
-    color: "text-zinc-200",
-    bg: "bg-zinc-200/10",
-    border: "border-zinc-300/20",
-    glow: true,
-  },
-  {
-    label: "Platform Costs",
-    value: "$3,420",
-    icon: TrendingDown,
-    color: "text-rose-400",
-    bg: "bg-rose-500/10",
-    border: "border-rose-500/20",
-  },
-  {
-    label: "Profit Margin",
-    value: "81.5%",
-    icon: TrendingUp,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-  },
-];
-
-const clientSummaries: Client[] = [
-  {
-    id: "1",
-    slug: "suncoast-sports",
-    name: "Suncoast Sports",
-    industry: "automotive",
-    logo_url: null,
-    primary_color: null,
-    accent_color: null,
-    website: "https://suncoastsports.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 92,
-    contract_start: "2025-09-01",
-    contract_end: "2026-08-31",
-    monthly_retainer: 5000,
-    notes: null,
-    created_at: "2025-09-01T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 2,
-    call_count_30d: 487,
-  },
-  {
-    id: "2",
-    slug: "orlando-art-of-surgery",
-    name: "Orlando Art of Surgery",
-    industry: "medical",
-    logo_url: null,
-    primary_color: null,
-    accent_color: null,
-    website: "https://orlandoartofsurgery.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 88,
-    contract_start: "2025-10-01",
-    contract_end: "2026-09-30",
-    monthly_retainer: 4500,
-    notes: null,
-    created_at: "2025-10-01T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 2,
-    call_count_30d: 312,
-  },
-  {
-    id: "3",
-    slug: "porsche-jackson",
-    name: "Porsche Jackson",
-    industry: "automotive",
-    logo_url: null,
-    primary_color: null,
-    accent_color: null,
-    website: "https://porschejackson.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 76,
-    contract_start: "2025-11-15",
-    contract_end: "2026-11-14",
-    monthly_retainer: 5000,
-    notes: null,
-    created_at: "2025-11-15T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 1,
-    call_count_30d: 198,
-  },
-  {
-    id: "4",
-    slug: "arrivia",
-    name: "Arrivia",
-    industry: "travel",
-    logo_url: null,
-    primary_color: null,
-    accent_color: null,
-    website: "https://arrivia.com",
-    status: "active",
-    onboarding_step: 5,
-    health_score: 85,
-    contract_start: "2025-12-01",
-    contract_end: "2026-11-30",
-    monthly_retainer: 4000,
-    notes: null,
-    created_at: "2025-12-01T00:00:00Z",
-    updated_at: "2026-03-01T00:00:00Z",
-    agent_count: 5,
-    call_count_30d: 250,
-  },
-];
-
-const recentActivities: ActivityEntry[] = [
-  {
-    id: "a1",
-    action: "Call completed",
-    details: "Riley handled inbound call for Suncoast Sports (3m 42s)",
-    entity_type: "call",
-    entity_id: "c1",
-    source: "vapi",
-    user_id: null,
-    created_at: new Date(Date.now() - 5 * 60000).toISOString(),
-  },
-  {
-    id: "a2",
-    action: "Agent synced",
-    details: "12 agents synced from VAPI API",
-    entity_type: "agent",
-    entity_id: null,
-    source: "system",
-    user_id: null,
-    created_at: new Date(Date.now() - 22 * 60000).toISOString(),
-  },
-  {
-    id: "a3",
-    action: "New deal created",
-    details: "Hill Nissan - AI Receptionist Demo ($4,500/mo)",
-    entity_type: "deal",
-    entity_id: "d1",
-    source: "manual",
-    user_id: null,
-    created_at: new Date(Date.now() - 45 * 60000).toISOString(),
-  },
-  {
-    id: "a4",
-    action: "Invoice paid",
-    details: "Suncoast Sports - March 2026 retainer ($5,000)",
-    entity_type: "invoice",
-    entity_id: "i1",
-    source: "stripe",
-    user_id: null,
-    created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: "a5",
-    action: "Call completed",
-    details: "Aria answered inbound for Orlando Art of Surgery (5m 18s)",
-    entity_type: "call",
-    entity_id: "c2",
-    source: "vapi",
-    user_id: null,
-    created_at: new Date(Date.now() - 3 * 3600000).toISOString(),
-  },
-  {
-    id: "a6",
-    action: "Deployment updated",
-    details: "suncoast-command deployed to Vercel (production)",
-    entity_type: "deployment",
-    entity_id: "dep1",
-    source: "vercel",
-    user_id: null,
-    created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-  },
-  {
-    id: "a7",
-    action: "Client onboarded",
-    details: "Gulf Coast Mitsubishi added to Mission Control",
-    entity_type: "client",
-    entity_id: "cl5",
-    source: "manual",
-    user_id: null,
-    created_at: new Date(Date.now() - 8 * 3600000).toISOString(),
-  },
-  {
-    id: "a8",
-    action: "Agent created",
-    details: "Maria (Gulf Coast Mitsubishi) deployed on VAPI",
-    entity_type: "agent",
-    entity_id: "ag5",
-    source: "vapi",
-    user_id: null,
-    created_at: new Date(Date.now() - 10 * 3600000).toISOString(),
-  },
-  {
-    id: "a9",
-    action: "Call completed",
-    details: "Mia handled upgrade call for Arrivia member (4m 55s)",
-    entity_type: "call",
-    entity_id: "c3",
-    source: "vapi",
-    user_id: null,
-    created_at: new Date(Date.now() - 12 * 3600000).toISOString(),
-  },
-  {
-    id: "a10",
-    action: "Content published",
-    details: "LinkedIn post: AI Voice Agents in Automotive",
-    entity_type: "content",
-    entity_id: "ct1",
-    source: "linkedin",
-    user_id: null,
-    created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -282,10 +31,208 @@ const statusBadge: Record<string, { bg: string; text: string; dot: string }> = {
 };
 
 // ---------------------------------------------------------------------------
+// Data fetching
+// ---------------------------------------------------------------------------
+
+async function getDashboardData() {
+  const supabase = await createClient();
+
+  const thirtyDaysAgo = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+  // Fire all queries in parallel
+  const [
+    clientsRes,
+    agentsRes,
+    callsRes,
+    costsRes,
+    activityRes,
+  ] = await Promise.all([
+    // 1. All clients
+    supabase
+      .from("mc_clients")
+      .select("id, slug, name, industry, status, health_score, monthly_retainer"),
+
+    // 2. Active agents with client_id for per-client counts
+    supabase
+      .from("mc_agents")
+      .select("id, client_id, status"),
+
+    // 3. Calls in last 30 days with client_id
+    supabase
+      .from("mc_calls")
+      .select("id, client_id")
+      .gte("created_at", thirtyDaysAgo),
+
+    // 4. Platform costs for current month
+    supabase
+      .from("mc_costs")
+      .select("amount")
+      .eq("period_month", currentMonth),
+
+    // 5. Recent activity (last 10)
+    supabase
+      .from("mc_activity")
+      .select("id, action, details, entity_type, entity_id, source, user_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  // Extract data with fallbacks
+  const clients = (clientsRes.data ?? []) as Array<{
+    id: string;
+    slug: string;
+    name: string;
+    industry: string;
+    status: string;
+    health_score: number;
+    monthly_retainer: number;
+  }>;
+
+  const agents = (agentsRes.data ?? []) as Array<{
+    id: string;
+    client_id: string;
+    status: string;
+  }>;
+
+  const calls = (callsRes.data ?? []) as Array<{
+    id: string;
+    client_id: string;
+  }>;
+
+  const costs = (costsRes.data ?? []) as Array<{
+    amount: number;
+  }>;
+
+  const activities = (activityRes.data ?? []) as ActivityEntry[];
+
+  // Compute per-client agent counts
+  const agentCountByClient: Record<string, number> = {};
+  for (const agent of agents) {
+    agentCountByClient[agent.client_id] =
+      (agentCountByClient[agent.client_id] ?? 0) + 1;
+  }
+
+  // Compute per-client call counts (30d)
+  const callCountByClient: Record<string, number> = {};
+  for (const call of calls) {
+    callCountByClient[call.client_id] =
+      (callCountByClient[call.client_id] ?? 0) + 1;
+  }
+
+  // Build enriched client summaries
+  const clientSummaries: Client[] = clients.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    industry: c.industry,
+    logo_url: null,
+    primary_color: null,
+    accent_color: null,
+    website: null,
+    status: c.status as Client["status"],
+    onboarding_step: 5,
+    health_score: c.health_score,
+    contract_start: null,
+    contract_end: null,
+    monthly_retainer: c.monthly_retainer,
+    notes: null,
+    created_at: "",
+    updated_at: "",
+    agent_count: agentCountByClient[c.id] ?? 0,
+    call_count_30d: callCountByClient[c.id] ?? 0,
+  }));
+
+  // KPI calculations
+  const totalCalls30d = calls.length;
+  const activeAgents = agents.filter((a) => a.status === "active").length;
+  const activeClients = clients.filter((c) => c.status === "active").length;
+  const monthlyRevenue = clients
+    .filter((c) => c.status === "active")
+    .reduce((sum, c) => sum + c.monthly_retainer, 0);
+  const platformCosts = costs.reduce((sum, c) => sum + c.amount, 0);
+  const profitMargin =
+    monthlyRevenue > 0
+      ? ((monthlyRevenue - platformCosts) / monthlyRevenue) * 100
+      : 0;
+
+  return {
+    clientSummaries,
+    activities,
+    kpis: {
+      totalCalls30d,
+      activeAgents,
+      activeClients,
+      monthlyRevenue,
+      platformCosts,
+      profitMargin,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default function DashboardHomePage() {
+export default async function DashboardHomePage() {
+  const { clientSummaries, activities, kpis } = await getDashboardData();
+
+  const kpiCards = [
+    {
+      label: "Total Calls (30d)",
+      value: kpis.totalCalls30d.toLocaleString(),
+      icon: Phone,
+      color: "text-zinc-200",
+      bg: "bg-zinc-200/10",
+      border: "border-zinc-300/20",
+      glow: true,
+    },
+    {
+      label: "Active Agents",
+      value: String(kpis.activeAgents),
+      icon: Bot,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+    },
+    {
+      label: "Active Clients",
+      value: String(kpis.activeClients),
+      icon: Building2,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
+    },
+    {
+      label: "Monthly Revenue",
+      value: formatCurrency(kpis.monthlyRevenue),
+      icon: DollarSign,
+      color: "text-zinc-200",
+      bg: "bg-zinc-200/10",
+      border: "border-zinc-300/20",
+      glow: true,
+    },
+    {
+      label: "Platform Costs",
+      value: formatCurrency(kpis.platformCosts),
+      icon: TrendingDown,
+      color: "text-rose-400",
+      bg: "bg-rose-500/10",
+      border: "border-rose-500/20",
+    },
+    {
+      label: "Profit Margin",
+      value: `${kpis.profitMargin.toFixed(1)}%`,
+      icon: TrendingUp,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -303,7 +250,7 @@ export default function DashboardHomePage() {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        {kpis.map((kpi, i) => (
+        {kpiCards.map((kpi, i) => (
           <KpiCard key={kpi.label} {...kpi} delay={i * 80} />
         ))}
       </div>
@@ -389,38 +336,13 @@ export default function DashboardHomePage() {
             <span className="text-xs text-zinc-500">last 24h</span>
           </div>
           <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-2">
-            <ActivityFeed activities={recentActivities} />
+            <ActivityFeed activities={activities} />
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-zinc-100">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Trigger Call", icon: Phone, color: "text-blue-400 hover:bg-blue-500/10" },
-            { label: "Sync Agents", icon: RefreshCcw, color: "text-emerald-400 hover:bg-emerald-500/10" },
-            { label: "Generate Report", icon: FileBarChart, color: "text-zinc-200 hover:bg-zinc-200/10" },
-            { label: "New Client", icon: UserPlus, color: "text-violet-400 hover:bg-violet-500/10" },
-          ].map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              className={cn(
-                "flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3",
-                "text-sm font-medium text-zinc-300 transition-all duration-200",
-                "hover:border-zinc-700 hover:text-zinc-100",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300/50",
-                action.color
-              )}
-            >
-              <action.icon className="h-4 w-4" />
-              {action.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <QuickActions />
     </div>
   );
 }

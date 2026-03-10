@@ -1,10 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   try {
+    // -- Webhook signature verification --
+    const secret = request.headers.get("x-vapi-secret");
+    const expectedSecret = process.env.VAPI_WEBHOOK_SECRET;
+
+    if (expectedSecret) {
+      if (secret !== expectedSecret) {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+    } else {
+      console.warn(
+        "[vapi-webhook] VAPI_WEBHOOK_SECRET is not set. " +
+          "Webhook signature verification is disabled. " +
+          "Set this env var in production."
+      );
+    }
+
     const body = await request.json();
-    const supabase = await createServerSupabase();
+    const supabase = createServiceClient();
     const messageType = body.message?.type ?? "";
     const call = body.message?.call ?? {};
     const callId = call.id ?? "";
