@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Hexagon, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,13 +43,15 @@ export default function LoginPage() {
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-2xl shadow-black/40">
         {/* Brand */}
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-200/[0.08] border border-zinc-300/20">
-            <Hexagon size={24} className="text-zinc-200" />
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-zinc-50">
-            VOXARIS
-          </h1>
-          <p className="mt-1 text-xs font-medium text-zinc-400">
+          <Image
+            src="/logo.png"
+            alt="Voxaris AI"
+            width={220}
+            height={80}
+            className="mb-2"
+            priority
+          />
+          <p className="text-xs font-medium text-zinc-400">
             Mission Control
           </p>
         </div>

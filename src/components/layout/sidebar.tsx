@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Hexagon } from "lucide-react";
+import Image from "next/image";
+import { Menu, X } from "lucide-react";
 import { NAV_SECTIONS } from "@/lib/constants";
 import { useMissionControl } from "@/lib/store";
 
@@ -14,17 +15,15 @@ export function Sidebar() {
     <>
       {/* Brand */}
       <div className="px-4 pt-5 pb-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-200/[0.08] border border-zinc-300/20">
-            <Hexagon size={18} className="text-zinc-200" />
-          </div>
-          <div>
-            <h1 className="text-[15px] font-bold tracking-tight text-foreground">
-              VOXARIS
-            </h1>
-          </div>
-        </div>
-        <p className="mt-1.5 pl-0.5 text-[10px] font-medium text-zinc-400">
+        <Image
+          src="/logo.png"
+          alt="Voxaris AI"
+          width={140}
+          height={50}
+          className="mb-1"
+          priority
+        />
+        <p className="pl-0.5 text-[10px] font-medium text-zinc-400">
           Mission Control
         </p>
       </div>
