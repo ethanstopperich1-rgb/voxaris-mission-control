@@ -1,38 +1,14 @@
 // =============================================================================
-// GoHighLevel (GHL) CRM Integration
+// GoHighLevel Integration — Workspace-Level Service
 // =============================================================================
 
 const BASE_URL = "https://services.leadconnectorhq.com";
-const API_VERSION = "2021-07-28";
-
-function getAccessToken(): string {
-  const token = process.env.GHL_ACCESS_TOKEN;
-  if (!token) throw new Error("GHL_ACCESS_TOKEN is not set");
-  return token;
-}
-
-function getLocationId(): string {
-  const id = process.env.GHL_LOCATION_ID;
-  if (!id) throw new Error("GHL_LOCATION_ID is not set");
-  return id;
-}
-
-function headers(): Record<string, string> {
-  return {
-    Authorization: `Bearer ${getAccessToken()}`,
-    Version: API_VERSION,
-    "Content-Type": "application/json",
-  };
-}
-
-// -- Rate Limiting & Retry ----------------------------------------------------
-
 const GHL_MAX_RETRIES = 3;
 const GHL_MIN_DELAY_MS = 200;
 
 let lastGhlCallAt = 0;
 
-async function ghlRateLimit() {
+async function rateLimit() {
   const now = Date.now();
   const elapsed = now - lastGhlCallAt;
   if (elapsed < GHL_MIN_DELAY_MS) {
@@ -41,17 +17,14 @@ async function ghlRateLimit() {
   lastGhlCallAt = Date.now();
 }
 
-async function ghlFetchWithRetry(
+async function fetchWithRetry(
   url: string,
   init: RequestInit,
-  retries = GHL_MAX_RETRIES
+  retries = GHL_MAX_RETRIES,
 ): Promise<Response> {
-  await ghlRateLimit();
+  await rateLimit();
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = await fetch(url, {
-      ...init,
-      signal: AbortSignal.timeout(10_000),
-    });
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) });
     if (res.status === 429 || res.status >= 500) {
       if (attempt < retries) {
         const delay = Math.pow(2, attempt) * 500;
@@ -64,7 +37,13 @@ async function ghlFetchWithRetry(
   return fetch(url, { ...init, signal: AbortSignal.timeout(10_000) });
 }
 
-// -- Types --------------------------------------------------------------------
+// -- Types ------------------------------------------------------------------
+
+export interface GHLConfig {
+  locationId: string;
+  accessToken: string;
+  apiVersion?: string;
+}
 
 export interface GHLContact {
   id?: string;
@@ -97,250 +76,183 @@ export interface GHLNote {
   [key: string]: unknown;
 }
 
-export interface CreateOrUpdateContactParams {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email?: string;
-  /** Source tag, e.g. "voxaris-bot", "apollo-enrichment" */
-  source?: string;
-}
-
-export interface CreateOpportunityParams {
-  contactId: string;
-  name: string;
-  pipelineId: string;
-  stageId: string;
-  monetaryValue?: number;
-}
-
-export interface MariaCallOutcome {
-  callId: string;
-  outcome: string;
-  duration: number;
-  transcript: string;
-  recordingUrl?: string;
-  summary?: string;
-  source?: string;
-  appointmentBooked?: boolean;
-  appointmentDate?: string;
-  appointmentTime?: string;
-}
-
 type Result<T> =
   | { success: true; data: T }
   | { success: false; error: string };
 
-// -- API Functions ------------------------------------------------------------
+// -- GHL Client (workspace-scoped) ------------------------------------------
 
-/**
- * Search for a GHL contact by phone number.
- * Returns the first matching contact or null inside a success result.
- */
-export async function findContact(phone: string): Promise<Result<GHLContact | null>> {
-  try {
-    const locationId = getLocationId();
-    const url = new URL(`${BASE_URL}/contacts/`);
-    url.searchParams.set("locationId", locationId);
-    url.searchParams.set("query", phone);
-    url.searchParams.set("limit", "1");
+export class GHLClient {
+  private locationId: string;
+  private accessToken: string;
+  private apiVersion: string;
 
-    const res = await ghlFetchWithRetry(url.toString(), {
-      method: "GET",
-      headers: headers(),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `GHL findContact failed (${res.status}): ${text}` };
-    }
-
-    const data = await res.json();
-    const contact: GHLContact | null = data.contacts?.[0] ?? null;
-    return { success: true, data: contact };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  constructor(config: GHLConfig) {
+    this.locationId = config.locationId;
+    this.accessToken = config.accessToken;
+    this.apiVersion = config.apiVersion ?? "2021-07-28";
   }
-}
 
-/**
- * Upsert a GHL contact. Uses POST /contacts/upsert which finds by phone
- * and creates or updates atomically.
- */
-export async function createOrUpdateContact(
-  data: CreateOrUpdateContactParams
-): Promise<Result<GHLContact>> {
-  try {
-    const locationId = getLocationId();
-
-    const payload: Record<string, unknown> = {
-      locationId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone,
+  private headers(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.accessToken}`,
+      Version: this.apiVersion,
+      "Content-Type": "application/json",
     };
-    if (data.email) payload.email = data.email;
-    if (data.source) payload.source = data.source;
+  }
 
-    const res = await ghlFetchWithRetry(`${BASE_URL}/contacts/upsert`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `GHL upsert contact failed (${res.status}): ${text}` };
+  async validateConfig(): Promise<Result<boolean>> {
+    try {
+      const res = await fetchWithRetry(
+        `${BASE_URL}/contacts/?locationId=${this.locationId}&limit=1`,
+        { method: "GET", headers: this.headers() },
+      );
+      if (!res.ok) {
+        return { success: false, error: `Validation failed (${res.status}): ${await res.text()}` };
+      }
+      return { success: true, data: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
     }
+  }
 
-    const result = await res.json();
-    return { success: true, data: result.contact ?? result };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  async findContact(phone: string): Promise<Result<GHLContact | null>> {
+    try {
+      const url = new URL(`${BASE_URL}/contacts/`);
+      url.searchParams.set("locationId", this.locationId);
+      url.searchParams.set("query", phone);
+      url.searchParams.set("limit", "1");
+      const res = await fetchWithRetry(url.toString(), { method: "GET", headers: this.headers() });
+      if (!res.ok) return { success: false, error: `findContact failed (${res.status})` };
+      const data = await res.json();
+      return { success: true, data: data.contacts?.[0] ?? null };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    }
+  }
+
+  async upsertContact(params: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    source?: string;
+    tags?: string[];
+  }): Promise<Result<GHLContact>> {
+    try {
+      const payload: Record<string, unknown> = {
+        locationId: this.locationId,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        phone: params.phone,
+      };
+      if (params.email) payload.email = params.email;
+      if (params.source) payload.source = params.source;
+      if (params.tags) payload.tags = params.tags;
+
+      const res = await fetchWithRetry(`${BASE_URL}/contacts/upsert`, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return { success: false, error: `upsertContact failed (${res.status})` };
+      const result = await res.json();
+      return { success: true, data: result.contact ?? result };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    }
+  }
+
+  async createOpportunity(params: {
+    contactId: string;
+    name: string;
+    pipelineId: string;
+    stageId: string;
+    monetaryValue?: number;
+  }): Promise<Result<GHLOpportunity>> {
+    try {
+      const payload: Record<string, unknown> = {
+        pipelineId: params.pipelineId,
+        locationId: this.locationId,
+        contactId: params.contactId,
+        stageId: params.stageId,
+        name: params.name,
+        status: "open",
+      };
+      if (params.monetaryValue !== undefined) payload.monetaryValue = params.monetaryValue;
+      const res = await fetchWithRetry(`${BASE_URL}/opportunities/`, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return { success: false, error: `createOpportunity failed (${res.status})` };
+      const result = await res.json();
+      return { success: true, data: result.opportunity ?? result };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    }
+  }
+
+  async addNote(contactId: string, body: string): Promise<Result<GHLNote>> {
+    try {
+      const res = await fetchWithRetry(
+        `${BASE_URL}/contacts/${encodeURIComponent(contactId)}/notes`,
+        { method: "POST", headers: this.headers(), body: JSON.stringify({ body, userId: null }) },
+      );
+      if (!res.ok) return { success: false, error: `addNote failed (${res.status})` };
+      const result = await res.json();
+      return { success: true, data: result.note ?? result };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    }
+  }
+
+  async addTags(contactId: string, tags: string[]): Promise<Result<unknown>> {
+    try {
+      const res = await fetchWithRetry(
+        `${BASE_URL}/contacts/${encodeURIComponent(contactId)}/tags`,
+        { method: "POST", headers: this.headers(), body: JSON.stringify({ tags }) },
+      );
+      if (!res.ok) return { success: false, error: `addTags failed (${res.status})` };
+      return { success: true, data: await res.json() };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    }
+  }
+
+  async fetchContact(contactId: string): Promise<Result<GHLContact>> {
+    try {
+      const res = await fetchWithRetry(
+        `${BASE_URL}/contacts/${encodeURIComponent(contactId)}`,
+        { method: "GET", headers: this.headers() },
+      );
+      if (!res.ok) return { success: false, error: `fetchContact failed (${res.status})` };
+      const result = await res.json();
+      return { success: true, data: result.contact ?? result };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    }
   }
 }
 
-/**
- * Create a new opportunity (deal) in a GHL pipeline.
- */
-export async function createOpportunity(
-  data: CreateOpportunityParams
-): Promise<Result<GHLOpportunity>> {
-  try {
-    const locationId = getLocationId();
+// -- Webhook Parsing --------------------------------------------------------
 
-    const payload: Record<string, unknown> = {
-      pipelineId: data.pipelineId,
-      locationId,
-      contactId: data.contactId,
-      stageId: data.stageId,
-      name: data.name,
-      status: "open",
-    };
-
-    if (data.monetaryValue !== undefined) {
-      payload.monetaryValue = data.monetaryValue;
-    }
-
-    const res = await ghlFetchWithRetry(`${BASE_URL}/opportunities/`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `GHL create opportunity failed (${res.status}): ${text}` };
-    }
-
-    const result = await res.json();
-    return { success: true, data: result.opportunity ?? result };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
-  }
+export interface GHLWebhookEvent {
+  type: string;
+  locationId: string;
+  contactId?: string;
+  opportunityId?: string;
+  payload: Record<string, unknown>;
+  raw: unknown;
 }
 
-/**
- * Write Maria's call outcome data to GHL contact custom fields.
- * Finds contact by phone, then updates all relevant fields.
- */
-export async function updateContactWithCallOutcome(
-  phone: string,
-  data: MariaCallOutcome
-): Promise<Result<GHLContact>> {
-  try {
-    const existing = await findContact(phone);
-    const contact = existing.success ? existing.data : null;
-
-    if (!contact?.id) {
-      return { success: false, error: `Contact not found for phone: ${phone}` };
-    }
-
-    const leadScore =
-      data.outcome === "DEMO BOOKED" ? "hot" :
-      data.outcome === "TALKED" || data.outcome === "CALLBACK" ? "warm" : "cold";
-
-    const customFields: Record<string, unknown>[] = [
-      { key: "contact.ai_outcome", field_value: data.outcome },
-      { key: "contact.ai_call_summary", field_value: data.summary || `${data.outcome} — ${data.duration}s call` },
-      { key: "contact.ai_duration_seconds", field_value: String(data.duration) },
-      { key: "contact.ai_conversation_date", field_value: new Date().toISOString().split("T")[0] },
-      { key: "contact.ai_conversation_id", field_value: data.callId },
-      { key: "contact.ai_conversation_type", field_value: "maria_outbound" },
-      { key: "contact.transcript_summary", field_value: (data.transcript || "").slice(0, 500) },
-      { key: "contact.call_outcome", field_value: `Maria called — ${data.outcome}. Duration: ${Math.floor(data.duration / 60)}:${String(data.duration % 60).padStart(2, "0")}` },
-      { key: "contact.industry", field_value: "roofing" },
-      { key: "contact.lead_score", field_value: leadScore },
-      { key: "contact.lead_source", field_value: data.source || "meta_ad" },
-      { key: "contact.appointment_booked", field_value: data.appointmentBooked ? "yes" : "no" },
-    ];
-
-    if (data.recordingUrl) {
-      customFields.push({ key: "contact.recording_url", field_value: data.recordingUrl });
-    }
-    if (data.appointmentDate) {
-      customFields.push({ key: "contact.appointment_date", field_value: data.appointmentDate });
-    }
-    if (data.appointmentTime) {
-      customFields.push({ key: "contact.appointment_time", field_value: data.appointmentTime });
-    }
-
-    const res = await ghlFetchWithRetry(`${BASE_URL}/contacts/${contact.id}`, {
-      method: "PUT",
-      headers: headers(),
-      body: JSON.stringify({ customFields }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `GHL update failed (${res.status}): ${text}` };
-    }
-
-    // Also add tags
-    await ghlFetchWithRetry(`${BASE_URL}/contacts/${contact.id}/tags`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify({
-        tags: [
-          "maria-called",
-          `outcome-${data.outcome.toLowerCase().replace(/\s+/g, "-")}`,
-          `score-${leadScore}`,
-        ],
-      }),
-    });
-
-    const result = await res.json();
-    return { success: true, data: result.contact ?? result };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
-  }
-}
-
-/**
- * Add a note to an existing GHL contact.
- */
-export async function addNote(
-  contactId: string,
-  body: string
-): Promise<Result<GHLNote>> {
-  try {
-    const res = await ghlFetchWithRetry(`${BASE_URL}/contacts/${encodeURIComponent(contactId)}/notes`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify({
-        body,
-        userId: null,
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { success: false, error: `GHL addNote failed (${res.status}): ${text}` };
-    }
-
-    const result = await res.json();
-    return { success: true, data: result.note ?? result };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
-  }
+export function parseGHLWebhook(body: unknown): GHLWebhookEvent | null {
+  if (!body || typeof body !== "object") return null;
+  const raw = body as Record<string, unknown>;
+  const type = (raw.type ?? raw.event ?? raw.eventType ?? "") as string;
+  const locationId = (raw.locationId ?? raw.location_id ?? "") as string;
+  const contactId = (raw.contactId ?? raw.contact_id) as string | undefined;
+  const opportunityId = (raw.opportunityId ?? raw.opportunity_id) as string | undefined;
+  if (!type) return null;
+  return { type, locationId, contactId: contactId || undefined, opportunityId: opportunityId || undefined, payload: raw, raw: body };
 }

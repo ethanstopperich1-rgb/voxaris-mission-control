@@ -27,7 +27,7 @@ interface ClientCardProps {
 export function ClientCard({ client }: ClientCardProps) {
   const router = useRouter();
   const status = statusStyles[client.status] ?? statusStyles.active;
-  const industryStyle = industryStyles[client.industry] ?? industryStyles.default;
+  const industryStyle = industryStyles[client.industry ?? "default"] ?? industryStyles.default;
 
   const healthColor =
     client.health_score > 70

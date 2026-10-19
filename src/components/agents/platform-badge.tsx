@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 const platformStyles: Record<string, { bg: string; text: string; label: string }> = {
   vapi: { bg: "bg-teal-500/15", text: "text-teal-400", label: "VAPI" },
   tavus: { bg: "bg-violet-500/15", text: "text-violet-400", label: "Tavus" },
+  retell: { bg: "bg-amber-500/15", text: "text-amber-400", label: "Retell" },
+  custom: { bg: "bg-zinc-500/15", text: "text-zinc-400", label: "Custom" },
 };
 
 interface PlatformBadgeProps {
-  platform: "vapi" | "tavus";
+  platform: string;
   className?: string;
 }
 

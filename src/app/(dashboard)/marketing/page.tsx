@@ -1,6 +1,8 @@
 import { Megaphone, Calendar, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionContext } from "@/server/auth";
+import { redirect } from "next/navigation";
 import type { ContentItem } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -8,11 +10,15 @@ import type { ContentItem } from "@/lib/types";
 // ---------------------------------------------------------------------------
 
 async function getContent(): Promise<ContentItem[]> {
+  const session = await getSessionContext();
+  if (!session) redirect("/login");
+
   const supabase = await createClient();
 
   const { data } = await supabase
     .from("mc_content")
     .select("*")
+    .eq("organization_id", session.organizationId)
     .order("scheduled_at", { ascending: true });
 
   return (data ?? []) as ContentItem[];
@@ -145,7 +151,7 @@ export default async function MarketingPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(item.tags ?? []).slice(0, 3).map((tag) => (
+                      {(item.tags ?? []).slice(0, 3).map((tag: string) => (
                         <span
                           key={tag}
                           className="rounded-full bg-zinc-800/60 px-2 py-0.5 text-[10px] font-medium text-zinc-400"

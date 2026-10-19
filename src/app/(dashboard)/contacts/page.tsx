@@ -1,5 +1,7 @@
-import { Users, Mail, Phone, Linkedin, Building2 } from "lucide-react";
+import { Users, Mail, Phone, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionContext } from "@/server/auth";
+import { redirect } from "next/navigation";
 import type { Contact } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -7,11 +9,15 @@ import type { Contact } from "@/lib/types";
 // ---------------------------------------------------------------------------
 
 async function getContacts(): Promise<Contact[]> {
+  const session = await getSessionContext();
+  if (!session) redirect("/login");
+
   const supabase = await createClient();
 
   const { data } = await supabase
     .from("mc_contacts")
     .select("*")
+    .eq("organization_id", session.organizationId)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -136,7 +142,7 @@ export default async function ContactsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(contact.tags ?? []).slice(0, 3).map((tag) => (
+                      {(contact.tags ?? []).slice(0, 3).map((tag: string) => (
                         <span
                           key={tag}
                           className="rounded-full bg-zinc-800/60 px-2 py-0.5 text-[10px] font-medium text-zinc-400"

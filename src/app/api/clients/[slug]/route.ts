@@ -1,95 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { requireRole, requireSession } from "@/server/auth";
+import { apiHandler, parseBody, errorResponse } from "@/server/api-helpers";
+import { clientService } from "@/server/services";
 import { clientUpdateSchema } from "@/lib/schemas";
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const { slug } = await params;
-  const supabase = await createClient();
+type Ctx = { params: Promise<{ slug: string }> };
 
-  const { data: client, error } = await supabase
-    .from("mc_clients")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+export const GET = apiHandler<Ctx>(async (_req, ctx) => {
+  await requireSession();
+  const { slug } = await ctx.params;
+  const client = await clientService.getBySlug(slug);
+  if (!client) return errorResponse("Client not found", 404);
+  return NextResponse.json(client);
+});
 
-  if (error || !client) {
-    return NextResponse.json(
-      { error: error?.message ?? "Client not found" },
-      { status: error ? 500 : 404 }
-    );
-  }
+export const PATCH = apiHandler<Ctx>(async (req, ctx) => {
+  const session = await requireRole("operator");
+  const { slug } = await ctx.params;
+  const client = await clientService.getBySlug(slug);
+  if (!client) return errorResponse("Client not found", 404);
+  const body = await parseBody(req, clientUpdateSchema);
+  const updated = await clientService.update(session, client.id, body);
+  return NextResponse.json(updated);
+});
 
-  // Get agent count for this client
-  const { count: agentCount } = await supabase
-    .from("mc_agents")
-    .select("id", { count: "exact", head: true })
-    .eq("client_id", client.id);
-
-  return NextResponse.json({
-    ...client,
-    agent_count: agentCount ?? 0,
-  });
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const { slug } = await params;
-  const supabase = await createClient();
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
-  }
-
-  const parsed = clientUpdateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-
-  const updates = { ...parsed.data } as Record<string, unknown>;
-
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json(
-      { error: "No valid fields to update" },
-      { status: 400 }
-    );
-  }
-
-  updates.updated_at = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from("mc_clients")
-    .update(updates)
-    .eq("slug", slug)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-
-  if (!data) {
-    return NextResponse.json(
-      { error: "Client not found" },
-      { status: 404 }
-    );
-  }
-
-  return NextResponse.json(data);
-}
+export const DELETE = apiHandler<Ctx>(async (_req, ctx) => {
+  const session = await requireRole("admin");
+  const { slug } = await ctx.params;
+  const client = await clientService.getBySlug(slug);
+  if (!client) return errorResponse("Client not found", 404);
+  await clientService.delete(session, client.id);
+  return NextResponse.json({ deleted: true });
+});

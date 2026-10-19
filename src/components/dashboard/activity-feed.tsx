@@ -54,8 +54,8 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
   return (
     <div className={cn("space-y-1", className)}>
       {activities.map((activity) => {
-        const Icon = entityIconMap[activity.entity_type] ?? Activity;
-        const iconColor = entityColorMap[activity.entity_type] ?? "text-zinc-400";
+        const Icon = entityIconMap[activity.entity_type ?? ""] ?? Activity;
+        const iconColor = entityColorMap[activity.entity_type ?? ""] ?? "text-zinc-400";
 
         return (
           <div

@@ -5,10 +5,14 @@ import {
   KanbanSquare,
   Users,
   DollarSign,
-  Megaphone,
   Rocket,
   Settings,
   LayoutDashboard,
+  UserPlus,
+  Workflow,
+  ShieldCheck,
+  AlertTriangle,
+  Plug,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,12 +33,21 @@ export interface NavSection {
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    title: "Core",
+    title: "Command",
     items: [
-      { label: "Dashboard", href: "/", icon: LayoutDashboard },
+      { label: "Command Center", href: "/", icon: LayoutDashboard },
       { label: "Clients", href: "/clients", icon: Building2 },
-      { label: "Agent Hub", href: "/agents", icon: Bot },
-      { label: "Call Center", href: "/calls", icon: Phone },
+      { label: "Leads", href: "/leads", icon: UserPlus },
+      { label: "Agents", href: "/agents", icon: Bot },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { label: "Workflows", href: "/workflows", icon: Workflow },
+      { label: "Approvals", href: "/approvals", icon: ShieldCheck },
+      { label: "Alerts", href: "/alerts", icon: AlertTriangle },
+      { label: "Calls", href: "/calls", icon: Phone },
     ],
   },
   {
@@ -43,13 +56,13 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Pipeline", href: "/pipeline", icon: KanbanSquare },
       { label: "Contacts", href: "/contacts", icon: Users },
       { label: "Finance", href: "/finance", icon: DollarSign },
-      { label: "Marketing", href: "/marketing", icon: Megaphone },
     ],
   },
   {
     title: "System",
     items: [
       { label: "Deployments", href: "/deployments", icon: Rocket },
+      { label: "Integrations", href: "/integrations", icon: Plug },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
   },

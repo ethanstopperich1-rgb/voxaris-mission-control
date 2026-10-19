@@ -1,334 +1,216 @@
 import {
-  Phone,
+  UserPlus,
+  UserX,
   Bot,
   Building2,
-  DollarSign,
-  TrendingDown,
-  TrendingUp,
+  AlertTriangle,
+  ShieldCheck,
+  Workflow,
+  Zap,
 } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
-import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
-import type { Client, ActivityEntry } from "@/lib/types";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const industryBadge: Record<string, string> = {
-  automotive: "bg-blue-500/10 text-blue-400",
-  medical: "bg-rose-500/10 text-rose-400",
-  travel: "bg-amber-500/10 text-amber-400",
-};
-
-const statusBadge: Record<string, { bg: string; text: string; dot: string }> = {
-  active: { bg: "bg-emerald-500/15", text: "text-emerald-400", dot: "bg-emerald-400" },
-  onboarding: { bg: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400" },
-  paused: { bg: "bg-zinc-500/15", text: "text-zinc-400", dot: "bg-zinc-400" },
-  churned: { bg: "bg-red-500/15", text: "text-red-400", dot: "bg-red-400" },
-};
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_LABELS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
+import { getSessionContext } from "@/server/auth";
+import { redirect } from "next/navigation";
+import type { ActivityEntry } from "@/lib/types";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Data fetching
 // ---------------------------------------------------------------------------
 
-async function getDashboardData() {
+async function getCommandCenterData() {
+  const session = await getSessionContext();
+  if (!session) redirect("/login");
+
   const supabase = await createClient();
+  const orgId = session.organizationId;
+  const today = new Date().toISOString().slice(0, 10);
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const thirtyDaysAgo = new Date(
-    Date.now() - 30 * 24 * 60 * 60 * 1000
-  ).toISOString();
-
-  const fourteenDaysAgo = new Date(
-    Date.now() - 14 * 24 * 60 * 60 * 1000
-  ).toISOString();
-
-  const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-
-  // Fire all queries in parallel
   const [
-    clientsRes,
-    agentsRes,
-    callsRes,
-    costsRes,
+    leadsToday,
+    leadsUncontacted,
+    activeAgents,
+    activeClients,
+    failedRuns,
+    pendingApprovals,
+    openAlerts,
+    activeWorkspaces,
+    recentLeads,
+    recentFailedRuns,
+    recentAlerts,
     activityRes,
-    callsDetailRes,
   ] = await Promise.all([
-    // 1. All clients
+    // New leads today
     supabase
-      .from("mc_clients")
-      .select("id, slug, name, industry, status, health_score, monthly_retainer"),
+      .from("mc_leads")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .gte("created_at", `${today}T00:00:00Z`),
 
-    // 2. Active agents with client_id for per-client counts
+    // Uncontacted leads
+    supabase
+      .from("mc_leads")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("status", "new"),
+
+    // Active agents
     supabase
       .from("mc_agents")
-      .select("id, client_id, status"),
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("status", "active"),
 
-    // 3. Calls in last 30 days with client_id
+    // Active clients
     supabase
-      .from("mc_calls")
-      .select("id, client_id")
-      .gte("created_at", thirtyDaysAgo),
+      .from("mc_clients")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("status", "active"),
 
-    // 4. Platform costs for current month
+    // Failed workflow runs (24h)
     supabase
-      .from("mc_costs")
-      .select("amount")
-      .eq("period_month", currentMonth),
+      .from("mc_workflow_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("status", "failed")
+      .gte("created_at", oneDayAgo),
 
-    // 5. Recent activity (last 10)
+    // Pending approvals
+    supabase
+      .from("mc_approvals")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("status", "pending"),
+
+    // Open alerts (error + critical)
+    supabase
+      .from("mc_alerts")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("status", "open")
+      .in("severity", ["error", "critical"]),
+
+    // Active workspaces
+    supabase
+      .from("mc_workspaces")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId),
+
+    // Recent leads (10)
+    supabase
+      .from("mc_leads")
+      .select("id, first_name, last_name, email, phone, source, status, created_at")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+
+    // Recent failed workflow runs (5)
+    supabase
+      .from("mc_workflow_runs")
+      .select("id, workflow_id, status, error, created_at")
+      .eq("organization_id", orgId)
+      .eq("status", "failed")
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    // Recent alerts (5)
+    supabase
+      .from("mc_alerts")
+      .select("id, severity, category, title, status, created_at")
+      .eq("organization_id", orgId)
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    // Activity feed
     supabase
       .from("mc_activity")
       .select("id, action, details, entity_type, entity_id, source, user_id, created_at")
+      .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(10),
-
-    // 6. Calls with date + platform for charts (last 14 days)
-    supabase
-      .from("mc_calls")
-      .select("id, created_at, platform")
-      .gte("created_at", fourteenDaysAgo),
   ]);
 
-  // Extract data with fallbacks
-  const clients = (clientsRes.data ?? []) as Array<{
-    id: string;
-    slug: string;
-    name: string;
-    industry: string;
-    status: string;
-    health_score: number;
-    monthly_retainer: number;
-  }>;
-
-  const agents = (agentsRes.data ?? []) as Array<{
-    id: string;
-    client_id: string;
-    status: string;
-  }>;
-
-  const calls = (callsRes.data ?? []) as Array<{
-    id: string;
-    client_id: string;
-  }>;
-
-  const costs = (costsRes.data ?? []) as Array<{
-    amount: number;
-  }>;
-
-  const activities = (activityRes.data ?? []) as ActivityEntry[];
-
-  const callsDetailed = (callsDetailRes.data ?? []) as Array<{
-    id: string;
-    created_at: string;
-    platform: string;
-  }>;
-
-  // Compute per-client agent counts
-  const agentCountByClient: Record<string, number> = {};
-  for (const agent of agents) {
-    agentCountByClient[agent.client_id] =
-      (agentCountByClient[agent.client_id] ?? 0) + 1;
-  }
-
-  // Compute per-client call counts (30d)
-  const callCountByClient: Record<string, number> = {};
-  for (const call of calls) {
-    callCountByClient[call.client_id] =
-      (callCountByClient[call.client_id] ?? 0) + 1;
-  }
-
-  // Build enriched client summaries
-  const clientSummaries: Client[] = clients.map((c) => ({
-    id: c.id,
-    slug: c.slug,
-    name: c.name,
-    industry: c.industry,
-    logo_url: null,
-    primary_color: null,
-    accent_color: null,
-    website: null,
-    status: c.status as Client["status"],
-    onboarding_step: 5,
-    health_score: c.health_score,
-    contract_start: null,
-    contract_end: null,
-    monthly_retainer: c.monthly_retainer,
-    notes: null,
-    created_at: "",
-    updated_at: "",
-    agent_count: agentCountByClient[c.id] ?? 0,
-    call_count_30d: callCountByClient[c.id] ?? 0,
-  }));
-
-  // KPI calculations
-  const totalCalls30d = calls.length;
-  const activeAgents = agents.filter((a) => a.status === "active").length;
-  const activeClients = clients.filter((c) => c.status === "active").length;
-  const monthlyRevenue = clients
-    .filter((c) => c.status === "active")
-    .reduce((sum, c) => sum + c.monthly_retainer, 0);
-  const platformCosts = costs.reduce((sum, c) => sum + c.amount, 0);
-  const profitMargin =
-    monthlyRevenue > 0
-      ? ((monthlyRevenue - platformCosts) / monthlyRevenue) * 100
-      : 0;
-
-  // -------------------------------------------------------------------------
-  // Chart data: Calls per day (last 14 days)
-  // -------------------------------------------------------------------------
-  const callsByDate: Record<string, number> = {};
-  for (const call of callsDetailed) {
-    const dateKey = call.created_at.slice(0, 10); // "YYYY-MM-DD"
-    callsByDate[dateKey] = (callsByDate[dateKey] ?? 0) + 1;
-  }
-
-  // Build a continuous 14-day series
-  const callsPerDay: { date: string; calls: number }[] = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-    const dateKey = d.toISOString().slice(0, 10);
-    const dayLabel = DAY_LABELS[d.getDay()];
-    callsPerDay.push({
-      date: i === 0 ? "Today" : dayLabel,
-      calls: callsByDate[dateKey] ?? 0,
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Chart data: Revenue trend (last 6 months from active client retainers)
-  // -------------------------------------------------------------------------
-  const revenueData: { month: string; revenue: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const label = MONTH_LABELS[d.getMonth()];
-    // Use current monthly revenue as an approximation for all months
-    // In production this would come from invoices or historical snapshots
-    revenueData.push({
-      month: label,
-      revenue: monthlyRevenue,
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Chart data: Platform distribution
-  // -------------------------------------------------------------------------
-  const platformCounts: Record<string, number> = {};
-  for (const call of callsDetailed) {
-    const p = (call.platform ?? "unknown").toLowerCase();
-    platformCounts[p] = (platformCounts[p] ?? 0) + 1;
-  }
-
-  const platformData = Object.entries(platformCounts).map(
-    ([platform, count]) => ({ platform, count })
-  );
-
-  // -------------------------------------------------------------------------
-  // KPI Sparkline data: 7-day call trend
-  // -------------------------------------------------------------------------
-  const sparklineCalls: number[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-    const dateKey = d.toISOString().slice(0, 10);
-    sparklineCalls.push(callsByDate[dateKey] ?? 0);
-  }
-
   return {
-    clientSummaries,
-    activities,
     kpis: {
-      totalCalls30d,
-      activeAgents,
-      activeClients,
-      monthlyRevenue,
-      platformCosts,
-      profitMargin,
+      leadsToday: leadsToday.count ?? 0,
+      leadsUncontacted: leadsUncontacted.count ?? 0,
+      activeAgents: activeAgents.count ?? 0,
+      activeClients: activeClients.count ?? 0,
+      failedRuns: failedRuns.count ?? 0,
+      pendingApprovals: pendingApprovals.count ?? 0,
+      openAlerts: openAlerts.count ?? 0,
+      activeWorkspaces: activeWorkspaces.count ?? 0,
     },
-    charts: {
-      callsPerDay,
-      revenueData,
-      platformData,
+    lists: {
+      recentLeads: (recentLeads.data ?? []) as Array<{
+        id: string; first_name: string; last_name: string;
+        email: string; phone: string; source: string; status: string; created_at: string;
+      }>,
+      recentFailedRuns: (recentFailedRuns.data ?? []) as Array<{
+        id: string; workflow_id: string; status: string; error: string; created_at: string;
+      }>,
+      recentAlerts: (recentAlerts.data ?? []) as Array<{
+        id: string; severity: string; category: string; title: string; status: string; created_at: string;
+      }>,
+      activities: (activityRes.data ?? []) as ActivityEntry[],
     },
-    sparklineCalls,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Status badge helpers
+// ---------------------------------------------------------------------------
+
+const severityColors: Record<string, string> = {
+  info: "text-blue-400 bg-blue-400/10",
+  warning: "text-amber-400 bg-amber-400/10",
+  error: "text-red-400 bg-red-400/10",
+  critical: "text-red-500 bg-red-500/15 animate-pulse-glow-red",
+};
+
+const leadStatusColors: Record<string, string> = {
+  new: "text-blue-400 bg-blue-400/10",
+  contacted: "text-amber-400 bg-amber-400/10",
+  qualified: "text-emerald-400 bg-emerald-400/10",
+  nurturing: "text-violet-400 bg-violet-400/10",
+  converted: "text-emerald-500 bg-emerald-500/10",
+  lost: "text-red-400 bg-red-400/10",
+  disqualified: "text-zinc-400 bg-zinc-400/10",
+};
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function DashboardHomePage() {
-  const { clientSummaries, activities, kpis, charts, sparklineCalls } =
-    await getDashboardData();
+export default async function CommandCenterPage() {
+  const { kpis, lists } = await getCommandCenterData();
 
   const kpiCards = [
-    {
-      label: "Total Calls (30d)",
-      value: kpis.totalCalls30d.toLocaleString(),
-      icon: Phone,
-      color: "text-zinc-200",
-      bg: "bg-zinc-200/10",
-      border: "border-zinc-300/20",
-      glow: true,
-      sparklineData: sparklineCalls,
-      sparklineColor: "#d4d4d8",
-    },
-    {
-      label: "Active Agents",
-      value: String(kpis.activeAgents),
-      icon: Bot,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      sparklineColor: "#34d399",
-    },
-    {
-      label: "Active Clients",
-      value: String(kpis.activeClients),
-      icon: Building2,
-      color: "text-blue-400",
-      bg: "bg-blue-500/10",
-      border: "border-blue-500/20",
-      sparklineColor: "#60a5fa",
-    },
-    {
-      label: "Monthly Revenue",
-      value: formatCurrency(kpis.monthlyRevenue),
-      icon: DollarSign,
-      color: "text-zinc-200",
-      bg: "bg-zinc-200/10",
-      border: "border-zinc-300/20",
-      glow: true,
-      sparklineColor: "#d4d4d8",
-    },
-    {
-      label: "Platform Costs",
-      value: formatCurrency(kpis.platformCosts),
-      icon: TrendingDown,
-      color: "text-rose-400",
-      bg: "bg-rose-500/10",
-      border: "border-rose-500/20",
-      sparklineColor: "#fb7185",
-    },
-    {
-      label: "Profit Margin",
-      value: `${kpis.profitMargin.toFixed(1)}%`,
-      icon: TrendingUp,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      sparklineColor: "#34d399",
-    },
+    { label: "New Leads Today", value: kpis.leadsToday, icon: UserPlus, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", href: "/leads?status=new" },
+    { label: "Uncontacted", value: kpis.leadsUncontacted, icon: UserX, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", href: "/leads?status=new" },
+    { label: "Active Agents", value: kpis.activeAgents, icon: Bot, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", href: "/agents" },
+    { label: "Active Clients", value: kpis.activeClients, icon: Building2, color: "text-zinc-200", bg: "bg-zinc-200/10", border: "border-zinc-300/20", href: "/clients" },
+    { label: "Failed Runs (24h)", value: kpis.failedRuns, icon: Workflow, color: kpis.failedRuns > 0 ? "text-red-400" : "text-zinc-400", bg: kpis.failedRuns > 0 ? "bg-red-500/10" : "bg-zinc-500/10", border: kpis.failedRuns > 0 ? "border-red-500/20" : "border-zinc-500/20", href: "/workflows" },
+    { label: "Pending Approvals", value: kpis.pendingApprovals, icon: ShieldCheck, color: kpis.pendingApprovals > 0 ? "text-amber-400" : "text-zinc-400", bg: kpis.pendingApprovals > 0 ? "bg-amber-500/10" : "bg-zinc-500/10", border: kpis.pendingApprovals > 0 ? "border-amber-500/20" : "border-zinc-500/20", href: "/approvals" },
+    { label: "Open Alerts", value: kpis.openAlerts, icon: AlertTriangle, color: kpis.openAlerts > 0 ? "text-red-400" : "text-emerald-400", bg: kpis.openAlerts > 0 ? "bg-red-500/10" : "bg-emerald-500/10", border: kpis.openAlerts > 0 ? "border-red-500/20" : "border-emerald-500/20", href: "/alerts" },
+    { label: "Workspaces", value: kpis.activeWorkspaces, icon: Zap, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", href: "/clients" },
   ];
 
   return (
@@ -338,110 +220,130 @@ export default async function DashboardHomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-200/5 via-transparent to-transparent" />
         <div className="relative">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
-            Mission Control
+            Command Center
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Complete operational overview of Voxaris AI
+            Voxaris Mission Control — Operational overview
           </p>
         </div>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-6">
-        {kpiCards.map((kpi, i) => (
-          <KpiCard key={kpi.label} {...kpi} delay={i * 80} />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-8">
+        {kpiCards.map((kpi) => (
+          <Link
+            key={kpi.label}
+            href={kpi.href}
+            className={cn(
+              "group flex flex-col items-center justify-center rounded-xl border p-4 text-center transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/20",
+              kpi.border,
+              kpi.bg,
+            )}
+          >
+            <kpi.icon size={18} className={cn("mb-2", kpi.color)} />
+            <span className="text-2xl font-bold text-zinc-100">{kpi.value}</span>
+            <span className="mt-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              {kpi.label}
+            </span>
+          </Link>
         ))}
       </div>
 
-      {/* Charts Section */}
-      <DashboardCharts
-        callsData={charts.callsPerDay}
-        revenueData={charts.revenueData}
-        platformData={charts.platformData}
-      />
-
-      {/* Client Summary + Activity Feed */}
+      {/* Main Grid: Leads + Alerts + Activity */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Client Summary */}
+        {/* Latest Leads */}
         <div className="lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-zinc-100">Client Summary</h2>
-            <span className="text-xs text-zinc-500">{clientSummaries.length} clients</span>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-zinc-100">Latest Leads</h2>
+            <Link href="/leads" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+              View all
+            </Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {clientSummaries.map((client) => {
-              const sBadge = statusBadge[client.status] ?? statusBadge.active;
-              const iBadge = industryBadge[client.industry] ?? "bg-zinc-500/10 text-zinc-400";
-              const healthColor =
-                client.health_score > 70
-                  ? "bg-emerald-500"
-                  : client.health_score > 40
-                    ? "bg-amber-500"
-                    : "bg-red-500";
-
-              return (
-                <div
-                  key={client.id}
-                  className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/60 hover:shadow-lg hover:shadow-black/20 hover:scale-[1.01]"
-                >
-                  <div className="mb-2 flex items-start justify-between">
-                    <h3 className="truncate text-sm font-semibold text-zinc-100">
-                      {client.name}
-                    </h3>
-                    <span
-                      className={cn(
-                        "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                        sBadge.bg,
-                        sBadge.text
-                      )}
-                    >
-                      <span className={cn("h-1.5 w-1.5 rounded-full", sBadge.dot)} />
-                      {client.status}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 divide-y divide-zinc-800/50">
+            {lists.recentLeads.length === 0 ? (
+              <div className="p-8 text-center text-sm text-zinc-500">
+                No leads yet. Ingest leads via webhook or create manually.
+              </div>
+            ) : (
+              lists.recentLeads.map((lead) => (
+                <div key={lead.id} className="flex items-center justify-between px-4 py-3 row-hover">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-zinc-200">
+                      {lead.first_name} {lead.last_name}
+                    </p>
+                    <p className="truncate text-xs text-zinc-500">
+                      {lead.email ?? lead.phone ?? "No contact info"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", leadStatusColors[lead.status] ?? "text-zinc-400 bg-zinc-400/10")}>
+                      {lead.status}
                     </span>
-                  </div>
-                  <span
-                    className={cn(
-                      "mb-3 w-fit rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider",
-                      iBadge
-                    )}
-                  >
-                    {client.industry}
-                  </span>
-                  <div className="mb-3 flex items-center gap-3 text-xs text-zinc-400">
-                    <span>{client.agent_count} agents</span>
-                    <span className="text-zinc-700">&middot;</span>
-                    <span>{client.call_count_30d} calls</span>
-                  </div>
-                  <div>
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-                        Health
-                      </span>
-                      <span className="text-xs font-semibold text-zinc-300">
-                        {client.health_score}%
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                      <div
-                        className={cn("h-full rounded-full transition-all", healthColor)}
-                        style={{ width: `${client.health_score}%` }}
-                      />
-                    </div>
+                    <span className="text-[10px] text-zinc-600">{lead.source}</span>
+                    <span className="text-[10px] text-zinc-600">{timeAgo(lead.created_at)}</span>
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Activity Feed */}
-        <div className="lg:col-span-1">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-zinc-100">Recent Activity</h2>
-            <span className="text-xs text-zinc-500">last 24h</span>
+        {/* Right column: Alerts + Approvals + Activity */}
+        <div className="space-y-6">
+          {/* Alerts */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-zinc-100">Open Alerts</h2>
+              <Link href="/alerts" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                View all
+              </Link>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 divide-y divide-zinc-800/50">
+              {lists.recentAlerts.length === 0 ? (
+                <div className="p-4 text-center text-xs text-zinc-500">No open alerts</div>
+              ) : (
+                lists.recentAlerts.map((alert) => (
+                  <div key={alert.id} className="px-3 py-2.5 row-hover">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", severityColors[alert.severity])}>
+                        {alert.severity}
+                      </span>
+                      <span className="truncate text-xs text-zinc-300">{alert.title}</span>
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-zinc-600">
+                      {alert.category} &middot; {timeAgo(alert.created_at)}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-2">
-            <ActivityFeed activities={activities} />
+
+          {/* Failed Runs */}
+          {lists.recentFailedRuns.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-sm font-semibold text-red-400">Failed Workflow Runs</h2>
+              <div className="rounded-xl border border-red-900/30 bg-red-950/10 divide-y divide-red-900/20">
+                {lists.recentFailedRuns.map((run) => (
+                  <div key={run.id} className="px-3 py-2.5">
+                    <p className="truncate text-xs text-red-300">
+                      {run.error ?? "Unknown error"}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-zinc-600">{timeAgo(run.created_at)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Activity Feed */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-zinc-100">Recent Activity</h2>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-2">
+              <ActivityFeed activities={lists.activities} />
+            </div>
           </div>
         </div>
       </div>

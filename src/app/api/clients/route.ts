@@ -1,71 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { clientSchema } from "@/lib/schemas";
+import { NextResponse } from "next/server";
+import { requireRole, requireSession } from "@/server/auth";
+import { apiHandler, parseBody } from "@/server/api-helpers";
+import { clientService } from "@/server/services";
+import { clientCreateSchema } from "@/lib/schemas";
 
-export async function GET() {
-  const supabase = await createClient();
+export const GET = apiHandler(async (req) => {
+  const session = await requireSession();
+  const url = new URL(req.url);
+  const page = Number(url.searchParams.get("page")) || 1;
+  const pageSize = Number(url.searchParams.get("pageSize")) || 25;
+  const search = url.searchParams.get("search") ?? undefined;
+  const sortBy = url.searchParams.get("sortBy") ?? undefined;
+  const sortDir = (url.searchParams.get("sortDir") as "asc" | "desc") ?? undefined;
 
-  const { data, error } = await supabase
-    .from("mc_clients")
-    .select("*")
-    .order("name", { ascending: true });
+  const result = await clientService.list(session, { page, pageSize, search, sortBy, sortDir });
+  return NextResponse.json(result);
+});
 
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json(data);
-}
-
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
-  }
-
-  const parsed = clientSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-
-  const { name, slug, industry, status, monthly_retainer, website, notes } =
-    parsed.data;
-
-  const { data, error } = await supabase
-    .from("mc_clients")
-    .insert({
-      name,
-      slug,
-      industry: industry ?? "other",
-      status: status ?? "onboarding",
-      monthly_retainer: monthly_retainer ?? 0,
-      website: website || null,
-      notes: notes ?? null,
-      health_score: 50,
-      onboarding_step: 1,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json(data, { status: 201 });
-}
+export const POST = apiHandler(async (req) => {
+  const session = await requireRole("operator");
+  const body = await parseBody(req, clientCreateSchema);
+  const client = await clientService.create(session, body);
+  return NextResponse.json(client, { status: 201 });
+});
